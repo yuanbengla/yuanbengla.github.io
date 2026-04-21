@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>重铸纪元 · 两轮打折销量与达人发布关联分析报告</title>
+<style>
+  :root{
+    --ink:#0e0e10;
+    --paper:#f4efe6;
+    --paper-2:#ebe4d5;
+    --accent:#c8472b;
+    --accent-2:#2d4a3e;
+    --gold:#b8914a;
+    --muted:#6a655d;
+    --rule:#1a1a1a;
+    --grid:rgba(14,14,16,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:"Songti SC","Source Han Serif SC","Noto Serif CJK SC",serif;line-height:1.75}
+  .wrap{max-width:1180px;margin:0 auto;padding:60px 48px 120px}
+
+  header.masthead{
+    border-top:3px double var(--rule);
+    border-bottom:3px double var(--rule);
+    padding:28px 0 20px;
+    margin-bottom:48px;
+    position:relative;
+  }
+  .kicker{
+    font-family:"Monaco","Menlo","Courier New",monospace;
+    font-size:11px;letter-spacing:.35em;text-transform:uppercase;
+    color:var(--muted);display:flex;justify-content:space-between;margin-bottom:18px;
+  }
+  h1.title{
+    font-size:clamp(48px,7vw,86px);
+    line-height:1;letter-spacing:.02em;margin:0 0 6px;
+    text-align:center;font-weight:900;
+  }
+  h1.title span{color:var(--accent)}
+  .subtitle{
+    text-align:center;font-size:15px;letter-spacing:.25em;
+    color:var(--muted);text-transform:uppercase;font-family:"Monaco",monospace;
+  }
+  .meta-row{
+    display:flex;justify-content:center;gap:32px;margin-top:18px;
+    font-size:13px;color:var(--muted);font-family:"Monaco",monospace;flex-wrap:wrap;
+  }
+  .meta-row b{color:var(--ink);font-weight:600}
+
+  .summary{
+    background:var(--ink);color:var(--paper);
+    padding:36px 42px;margin:0 0 60px;
+    border-left:8px solid var(--accent);
+    box-shadow:12px 12px 0 var(--gold);
+  }
+  .summary h2{
+    font-size:30px;letter-spacing:.08em;margin:0 0 18px;color:var(--gold);
+  }
+  .summary p{margin:0 0 12px;font-size:15.5px;line-height:1.85}
+  .summary .tag{display:inline-block;background:var(--accent);color:#fff;padding:3px 10px;font-family:"Monaco",monospace;font-size:11px;letter-spacing:.15em;margin-right:6px}
+
+  section{margin:60px 0}
+  h2.chapter{
+    font-size:38px;letter-spacing:.05em;margin:0 0 6px;
+    display:flex;align-items:baseline;gap:16px;font-weight:900;
+  }
+  h2.chapter .num{color:var(--accent);font-size:52px;line-height:1;
+    border-right:2px solid var(--rule);padding-right:16px;}
+  .chapter-rule{display:block;height:0;border-top:2px solid var(--rule);
+    border-bottom:1px solid var(--rule);padding-top:6px;margin-bottom:28px;}
+  h3.sub{font-size:20px;font-weight:700;margin:28px 0 10px;
+    padding-left:14px;border-left:4px solid var(--accent);}
+
+  .kpi-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:2px;
+    background:var(--rule);border:2px solid var(--rule);margin:20px 0 28px;
+  }
+  .kpi{background:var(--paper-2);padding:22px 20px}
+  .kpi .label{font-family:"Monaco",monospace;font-size:10.5px;
+    letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
+  .kpi .val{font-size:34px;line-height:1;color:var(--ink);margin-bottom:4px;font-weight:900;}
+  .kpi .delta{font-size:12px;font-family:"Monaco",monospace}
+  .kpi .delta.up{color:var(--accent-2)}
+  .kpi .delta.down{color:var(--accent)}
+  .kpi.featured{background:var(--ink);color:var(--paper)}
+  .kpi.featured .label{color:var(--gold)}
+  .kpi.featured .val{color:var(--paper)}
+
+  .chart-card{
+    background:#fff;border:2px solid var(--rule);padding:22px 24px 18px;margin:18px 0;
+    box-shadow:6px 6px 0 var(--ink);
+  }
+  .chart-card.inv{background:var(--ink);color:var(--paper)}
+  .chart-title{font-weight:700;font-size:15px;letter-spacing:.05em;margin-bottom:4px;
+    display:flex;justify-content:space-between;align-items:center;}
+  .chart-title .cap{font-family:"Monaco",monospace;font-size:10px;
+    letter-spacing:.15em;color:var(--muted);font-weight:500;}
+  .chart-sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .chart-svg{width:100%;height:auto;display:block}
+  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:900px){.chart-row{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+
+  table.data{
+    width:100%;border-collapse:collapse;margin:18px 0;
+    font-family:"Monaco",monospace;font-size:12.5px;
+  }
+  table.data th,table.data td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--grid)}
+  table.data thead th{background:var(--ink);color:var(--paper);font-weight:500;
+    letter-spacing:.08em;font-size:11px;text-transform:uppercase;}
+  table.data tbody tr:hover{background:var(--paper-2)}
+  table.data td.num{text-align:right;font-variant-numeric:tabular-nums}
+  table.data .highlight{background:#fff3cd}
+
+  .insight{background:var(--paper-2);border-left:6px solid var(--accent-2);
+    padding:20px 24px;margin:20px 0;position:relative;}
+  .insight::before{content:"◆ 洞察";position:absolute;top:-12px;left:18px;
+    background:var(--accent-2);color:#fff;padding:3px 12px;
+    font-family:"Monaco",monospace;font-size:10px;letter-spacing:.2em;}
+  .insight.warn{border-left-color:var(--accent)}
+  .insight.warn::before{content:"▲ 警示";background:var(--accent)}
+  .insight.action{border-left-color:var(--gold)}
+  .insight.action::before{content:"▶ 建议";background:var(--gold)}
+  .insight p{margin:6px 0}
+  .insight b{background:linear-gradient(transparent 60%,rgba(200,71,43,.25) 60%)}
+
+  .vs-box{display:grid;grid-template-columns:1fr 80px 1fr;gap:0;
+    border:2px solid var(--rule);margin:24px 0;}
+  .vs-box > div{padding:22px 24px}
+  .vs-box .left{background:var(--paper-2)}
+  .vs-box .right{background:#fff}
+  .vs-box .mid{background:var(--ink);color:var(--gold);display:flex;
+    align-items:center;justify-content:center;font-size:30px;letter-spacing:.1em;font-weight:900;}
+  .vs-box h4{margin:0 0 10px;font-size:14px;letter-spacing:.15em;
+    text-transform:uppercase;color:var(--muted);font-family:"Monaco",monospace;}
+  .vs-box .big{font-size:38px;line-height:1;margin:4px 0 8px;font-weight:900;}
+  .vs-box ul{margin:8px 0 0;padding-left:18px;font-size:13.5px;line-height:1.7}
+
+  .verdict{background:var(--ink);color:var(--paper);padding:44px 48px;margin:60px 0 0;
+    position:relative;border-top:6px solid var(--accent);}
+  .verdict h2{font-size:40px;letter-spacing:.08em;margin:0 0 24px;color:var(--gold);font-weight:900;}
+  .verdict ol{counter-reset:v;list-style:none;padding:0;margin:0}
+  .verdict ol li{counter-increment:v;padding:16px 0 16px 56px;position:relative;
+    border-bottom:1px dashed rgba(244,239,230,.2);font-size:15px;line-height:1.8;}
+  .verdict ol li::before{content:counter(v,decimal-leading-zero);
+    position:absolute;left:0;top:16px;font-size:28px;color:var(--accent);line-height:1;font-weight:900;}
+  .verdict ol li:last-child{border-bottom:none}
+  .verdict b{color:var(--gold)}
+
+  footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);
+    display:flex;justify-content:space-between;font-family:"Monaco",monospace;
+    font-size:11px;color:var(--muted);letter-spacing:.15em;}
+  .ornament{text-align:center;color:var(--gold);letter-spacing:.4em;margin:40px 0;font-size:14px;}
+
+  /* SVG 图表内部样式 */
+  svg .axis{stroke:#999;stroke-width:1}
+  svg .grid{stroke:rgba(0,0,0,.08);stroke-width:1;stroke-dasharray:2 2}
+  svg .tick{font-family:"Monaco",monospace;font-size:11px;fill:#555}
+  svg .label{font-family:"Monaco",monospace;font-size:12px;fill:#222;font-weight:600}
+  svg .value{font-family:"Monaco",monospace;font-size:11px;fill:#222;font-weight:700}
+  svg .legend{font-family:"Monaco",monospace;font-size:11px;fill:#333}
+  svg.inv-bg .tick,svg.inv-bg .label{fill:#d4cdbf}
+  svg.inv-bg .value{fill:#f4efe6}
+  svg.inv-bg .legend{fill:#f4efe6}
+  svg.inv-bg .grid{stroke:rgba(244,239,230,.1)}
+  svg.inv-bg .axis{stroke:#888}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 刊头 -->
+<header class="masthead">
+  <div class="kicker"><span>SYWDN · 游戏运营数据组</span><span>内部分析报告 / Vol. 001</span><span>2026 · 04 · 17</span></div>
+  <h1 class="title">重铸纪元 · <span>两轮打折</span> 复盘</h1>
+  <div class="subtitle">Sales × KOL Correlation Analysis</div>
+  <div class="meta-row">
+    <span>数据区间 <b>2026-01-06 → 2026-04-11</b></span>
+    <span>样本 <b>74 条发布 · 4 个打折阶段</b></span>
+    <span>口径 <b>愿望单／净销量／净流水</b></span>
+  </div>
+</header>
+
+<!-- 执行摘要 -->
+<div class="summary">
+  <h2>TL;DR · 执行摘要</h2>
+  <p><span class="tag">结论 1</span>两轮打折销售表现呈明显下降：<b>第 2 轮期间净流水比第 1 轮下降 48.6%，净销量下降 50.0%</b>，但两轮折扣力度相近（0.25-0.30），说明销量差异主要由<b>曝光规模与时机</b>驱动，而非折扣本身。</p>
+  <p><span class="tag">结论 2</span>第 1 轮 <b>0 元成本撬动 51.8 万次播放</b>，原因是押中了日本市场头部自发播主的热度窗口期（さくよう / ぽんぽんの動画箱 单条均破 14 万播放）；第 2 轮虽投入约 4.3 万人民币做付费投放，总播放量却缩水 28.1%。</p>
+  <p><span class="tag">结论 3</span>第 2 轮付费达人 ROI 整体偏低（净流水/投入 ≈ 0.55），但<b>付费单条均播放量是免费的 5.7 倍</b>，说明付费本身没问题，问题在<b>达人选型</b>——个别高价定制视频（Chato 800 USD 仅 433 播放）严重拖累整体 CPV。</p>
+</div>
+
+<!-- 第一章 -->
+<section>
+  <h2 class="chapter"><span class="num">01</span>两轮打折销售数据对比</h2>
+  <span class="chapter-rule"></span>
+  <p>先看销售侧的基本盘。两轮打折共覆盖 4 个折扣阶段，折扣力度分布在 0.25-0.30 之间，折扣时长相近，但销售结果差距显著。</p>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div class="label">第 1 轮 · 净销量</div>
+      <div class="val">3,255</div>
+      <div class="delta">份 · 21 天累计</div>
+    </div>
+    <div class="kpi">
+      <div class="label">第 2 轮 · 净销量</div>
+      <div class="val">1,629</div>
+      <div class="delta down">▼ 50.0% vs R1</div>
+    </div>
+    <div class="kpi featured">
+      <div class="label">第 1 轮 · 净流水</div>
+      <div class="val">¥46,629</div>
+      <div class="delta">21 天累计</div>
+    </div>
+    <div class="kpi">
+      <div class="label">第 2 轮 · 净流水</div>
+      <div class="val">¥23,950</div>
+      <div class="delta down">▼ 48.6% vs R1</div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <!-- 图 1.1 四阶段净流水对比 -->
+    <div class="chart-card">
+      <div class="chart-title"><span>图 1.1 ｜ 四阶段净流水对比</span><span class="cap">UNIT: RMB</span></div>
+      <div class="chart-sub">农历新年档是单阶段峰值（¥34,736），贡献第 1 轮 74.5% 的流水。</div>
+      <svg class="chart-svg" viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg">
+        <!-- Y 轴网格 -->
+        <line class="grid" x1="70" y1="40" x2="500" y2="40"/>
+        <line class="grid" x1="70" y1="100" x2="500" y2="100"/>
+        <line class="grid" x1="70" y1="160" x2="500" y2="160"/>
+        <line class="grid" x1="70" y1="220" x2="500" y2="220"/>
+        <line class="axis" x1="70" y1="280" x2="500" y2="280"/>
+        <!-- Y 轴标签 -->
+        <text class="tick" x="62" y="44" text-anchor="end">¥40k</text>
+        <text class="tick" x="62" y="104" text-anchor="end">¥30k</text>
+        <text class="tick" x="62" y="164" text-anchor="end">¥20k</text>
+        <text class="tick" x="62" y="224" text-anchor="end">¥10k</text>
+        <text class="tick" x="62" y="284" text-anchor="end">¥0</text>
+        <!-- 柱子：max=40000, height scale = 240/40000 = 0.006 -->
+        <!-- R1日常 11892 -> h=71.4 -->
+        <rect x="100" y="208.6" width="70" height="71.4" fill="#c8472b" opacity="0.8"/>
+        <text class="value" x="135" y="200" text-anchor="middle">¥11,892</text>
+        <text class="label" x="135" y="302" text-anchor="middle">R1 日常</text>
+        <text class="tick" x="135" y="318" text-anchor="middle">01-06~01-13</text>
+        <!-- R1春节 34736 -> h=208 -->
+        <rect x="200" y="71.6" width="70" height="208.4" fill="#c8472b"/>
+        <text class="value" x="235" y="63" text-anchor="middle">¥34,736</text>
+        <text class="label" x="235" y="302" text-anchor="middle">R1 春节</text>
+        <text class="tick" x="235" y="318" text-anchor="middle">02-12~02-26</text>
+        <!-- R2春促 11193 -> h=67.2 -->
+        <rect x="300" y="212.8" width="70" height="67.2" fill="#2d4a3e" opacity="0.85"/>
+        <text class="value" x="335" y="204" text-anchor="middle">¥11,193</text>
+        <text class="label" x="335" y="302" text-anchor="middle">R2 春促</text>
+        <text class="tick" x="335" y="318" text-anchor="middle">03-19~03-26</text>
+        <!-- R2日常 12757 -> h=76.5 -->
+        <rect x="400" y="203.5" width="70" height="76.5" fill="#2d4a3e" opacity="0.65"/>
+        <text class="value" x="435" y="195" text-anchor="middle">¥12,757</text>
+        <text class="label" x="435" y="302" text-anchor="middle">R2 日常</text>
+        <text class="tick" x="435" y="318" text-anchor="middle">03-28~04-11</text>
+      </svg>
+    </div>
+
+    <!-- 图 1.2 日均净销量 -->
+    <div class="chart-card">
+      <div class="chart-title"><span>图 1.2 ｜ 四阶段日均净销量</span><span class="cap">UNIT: 份/日</span></div>
+      <div class="chart-sub">归一化后，春节档日均销量最高（177.8），第 2 轮日常档最低（61.4）。</div>
+      <svg class="chart-svg" viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg">
+        <line class="grid" x1="70" y1="40" x2="500" y2="40"/>
+        <line class="grid" x1="70" y1="100" x2="500" y2="100"/>
+        <line class="grid" x1="70" y1="160" x2="500" y2="160"/>
+        <line class="grid" x1="70" y1="220" x2="500" y2="220"/>
+        <line class="axis" x1="70" y1="280" x2="500" y2="280"/>
+        <text class="tick" x="62" y="44" text-anchor="end">200</text>
+        <text class="tick" x="62" y="104" text-anchor="end">150</text>
+        <text class="tick" x="62" y="164" text-anchor="end">100</text>
+        <text class="tick" x="62" y="224" text-anchor="end">50</text>
+        <text class="tick" x="62" y="284" text-anchor="end">0</text>
+        <!-- max=200, scale = 240/200 = 1.2 -->
+        <!-- 109.4 -> h=131.3 -->
+        <rect x="100" y="148.7" width="70" height="131.3" fill="#c8472b" opacity="0.6"/>
+        <text class="value" x="135" y="140" text-anchor="middle">109.4</text>
+        <text class="label" x="135" y="302" text-anchor="middle">R1 日常</text>
+        <!-- 177.8 -> h=213.4 -->
+        <rect x="200" y="66.6" width="70" height="213.4" fill="#c8472b"/>
+        <text class="value" x="235" y="58" text-anchor="middle">177.8</text>
+        <text class="label" x="235" y="302" text-anchor="middle">R1 春节</text>
+        <!-- 109.9 -> h=131.9 -->
+        <rect x="300" y="148.1" width="70" height="131.9" fill="#2d4a3e" opacity="0.6"/>
+        <text class="value" x="335" y="140" text-anchor="middle">109.9</text>
+        <text class="label" x="335" y="302" text-anchor="middle">R2 春促</text>
+        <!-- 61.4 -> h=73.7 -->
+        <rect x="400" y="206.3" width="70" height="73.7" fill="#2d4a3e" opacity="0.4"/>
+        <text class="value" x="435" y="198" text-anchor="middle">61.4</text>
+        <text class="label" x="435" y="302" text-anchor="middle">R2 日常</text>
+      </svg>
+    </div>
+  </div>
+
+  <h3 class="sub">愿望单漏斗：热度前导指标</h3>
+  <p>愿望单新增是比销量更前置的热度指标，它直接反映"被达人内容触达后、但还未下单"的潜在用户规模。</p>
+
+  <!-- 图 1.3 愿望单漏斗 -->
+  <div class="chart-card">
+    <div class="chart-title"><span>图 1.3 ｜ 四阶段愿望单漏斗</span><span class="cap">新增 / 删除 / 转化 / 净增</span></div>
+    <div class="chart-sub">第 1 轮春节档愿望单新增 4,382，是四阶段最高值；第 2 轮两阶段愿望单新增都在 2,200 左右，明显走弱。</div>
+    <svg class="chart-svg" viewBox="0 0 980 420" xmlns="http://www.w3.org/2000/svg">
+      <!-- 背景网格 -->
+      <line class="grid" x1="70" y1="40" x2="960" y2="40"/>
+      <line class="grid" x1="70" y1="100" x2="960" y2="100"/>
+      <line class="grid" x1="70" y1="160" x2="960" y2="160"/>
+      <line class="grid" x1="70" y1="220" x2="960" y2="220"/>
+      <line class="grid" x1="70" y1="280" x2="960" y2="280"/>
+      <line class="axis" x1="70" y1="340" x2="960" y2="340"/>
+      <!-- Y 轴 -->
+      <text class="tick" x="62" y="44" text-anchor="end">5000</text>
+      <text class="tick" x="62" y="104" text-anchor="end">4000</text>
+      <text class="tick" x="62" y="164" text-anchor="end">3000</text>
+      <text class="tick" x="62" y="224" text-anchor="end">2000</text>
+      <text class="tick" x="62" y="284" text-anchor="end">1000</text>
+      <text class="tick" x="62" y="344" text-anchor="end">0</text>
+      <!-- 每组 4 根柱，组间距 220，每根 45 -->
+      <!-- max=5000 ratio=300/5000=0.06 -->
+
+      <!-- 组1: R1日常 -->
+      <!-- 新增 2319 h=139.14 -->
+      <rect x="100" y="200.86" width="45" height="139.14" fill="#2d4a3e"/>
+      <text class="value" x="122" y="195" text-anchor="middle" font-size="9">2319</text>
+      <!-- 删除 813 h=48.78 -->
+      <rect x="148" y="291.22" width="45" height="48.78" fill="#c8472b" opacity="0.6"/>
+      <text class="value" x="170" y="285" text-anchor="middle" font-size="9">813</text>
+      <!-- 购买激活 486 h=29.16 -->
+      <rect x="196" y="310.84" width="45" height="29.16" fill="#b8914a"/>
+      <text class="value" x="218" y="305" text-anchor="middle" font-size="9">486</text>
+      <!-- 净增 1019 h=61.14 -->
+      <rect x="244" y="278.86" width="45" height="61.14" fill="#0e0e10"/>
+      <text class="value" x="266" y="273" text-anchor="middle" font-size="9">1019</text>
+      <text class="label" x="195" y="360" text-anchor="middle">R1 日常</text>
+
+      <!-- 组2: R1春节 x起点300 -->
+      <!-- 新增 4382 h=262.92 -->
+      <rect x="320" y="77.08" width="45" height="262.92" fill="#2d4a3e"/>
+      <text class="value" x="342" y="70" text-anchor="middle" font-size="9">4382</text>
+      <!-- 删除 1273 h=76.38 -->
+      <rect x="368" y="263.62" width="45" height="76.38" fill="#c8472b" opacity="0.6"/>
+      <text class="value" x="390" y="258" text-anchor="middle" font-size="9">1273</text>
+      <!-- 购买激活 1683 h=100.98 -->
+      <rect x="416" y="239.02" width="45" height="100.98" fill="#b8914a"/>
+      <text class="value" x="438" y="233" text-anchor="middle" font-size="9">1683</text>
+      <!-- 净增 1417 h=85.02 -->
+      <rect x="464" y="254.98" width="45" height="85.02" fill="#0e0e10"/>
+      <text class="value" x="486" y="249" text-anchor="middle" font-size="9">1417</text>
+      <text class="label" x="415" y="360" text-anchor="middle">R1 春节</text>
+
+      <!-- 组3: R2春促 x起点520 -->
+      <!-- 新增 2185 h=131.1 -->
+      <rect x="540" y="208.9" width="45" height="131.1" fill="#2d4a3e"/>
+      <text class="value" x="562" y="203" text-anchor="middle" font-size="9">2185</text>
+      <!-- 删除 810 h=48.6 -->
+      <rect x="588" y="291.4" width="45" height="48.6" fill="#c8472b" opacity="0.6"/>
+      <text class="value" x="610" y="285" text-anchor="middle" font-size="9">810</text>
+      <!-- 购买激活 547 h=32.82 -->
+      <rect x="636" y="307.18" width="45" height="32.82" fill="#b8914a"/>
+      <text class="value" x="658" y="302" text-anchor="middle" font-size="9">547</text>
+      <!-- 净增 826 h=49.56 -->
+      <rect x="684" y="290.44" width="45" height="49.56" fill="#0e0e10"/>
+      <text class="value" x="706" y="285" text-anchor="middle" font-size="9">826</text>
+      <text class="label" x="635" y="360" text-anchor="middle">R2 春促</text>
+
+      <!-- 组4: R2日常 x起点740 -->
+      <!-- 新增 2231 h=133.86 -->
+      <rect x="760" y="206.14" width="45" height="133.86" fill="#2d4a3e"/>
+      <text class="value" x="782" y="200" text-anchor="middle" font-size="9">2231</text>
+      <!-- 删除 1161 h=69.66 -->
+      <rect x="808" y="270.34" width="45" height="69.66" fill="#c8472b" opacity="0.6"/>
+      <text class="value" x="830" y="264" text-anchor="middle" font-size="9">1161</text>
+      <!-- 购买激活 注意本轮为+662（流入而非流出），用特殊颜色 -->
+      <rect x="856" y="300.28" width="45" height="39.72" fill="#b8914a" opacity="0.4" stroke="#b8914a" stroke-dasharray="3 2"/>
+      <text class="value" x="878" y="295" text-anchor="middle" font-size="9">+662</text>
+      <!-- 净增 429 h=25.74 -->
+      <rect x="904" y="314.26" width="45" height="25.74" fill="#0e0e10"/>
+      <text class="value" x="926" y="309" text-anchor="middle" font-size="9">429</text>
+      <text class="label" x="855" y="360" text-anchor="middle">R2 日常</text>
+
+      <!-- 图例 -->
+      <g transform="translate(70,390)">
+        <rect x="0" y="0" width="14" height="14" fill="#2d4a3e"/><text class="legend" x="20" y="11">愿望单新增</text>
+        <rect x="130" y="0" width="14" height="14" fill="#c8472b" opacity="0.6"/><text class="legend" x="150" y="11">愿望单删除</text>
+        <rect x="260" y="0" width="14" height="14" fill="#b8914a"/><text class="legend" x="280" y="11">购买及激活</text>
+        <rect x="400" y="0" width="14" height="14" fill="#0e0e10"/><text class="legend" x="420" y="11">愿望单净增</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="insight">
+    <p><b>愿望单新增同步缩水，不是打折没人买，是池子变小了。</b> 第 1 轮两阶段愿望单合计新增 6,701，第 2 轮两阶段合计 4,416，下降 34.1%——这个数字和净流水下降幅度接近，强烈暗示曝光端是销售下滑的根因。</p>
+  </div>
+
+  <!-- 图 1.4 折扣 vs 退款 -->
+  <div class="chart-card">
+    <div class="chart-title"><span>图 1.4 ｜ 折扣力度 vs 退款率</span><span class="cap">折扣与退款关系</span></div>
+    <div class="chart-sub">四阶段折扣设置在 0.25-0.30，但退款率波动 10.7%-16.2%，退款率与折扣深度无明显正相关。</div>
+    <svg class="chart-svg" viewBox="0 0 980 340" xmlns="http://www.w3.org/2000/svg">
+      <line class="grid" x1="70" y1="40" x2="960" y2="40"/>
+      <line class="grid" x1="70" y1="100" x2="960" y2="100"/>
+      <line class="grid" x1="70" y1="160" x2="960" y2="160"/>
+      <line class="grid" x1="70" y1="220" x2="960" y2="220"/>
+      <line class="axis" x1="70" y1="280" x2="960" y2="280"/>
+      <text class="tick" x="62" y="44" text-anchor="end">35%</text>
+      <text class="tick" x="62" y="104" text-anchor="end">25%</text>
+      <text class="tick" x="62" y="164" text-anchor="end">15%</text>
+      <text class="tick" x="62" y="224" text-anchor="end">5%</text>
+      <text class="tick" x="62" y="284" text-anchor="end">0%</text>
+
+      <!-- 柱状：折扣  max=35% scale=240/0.35=685.7 -->
+      <!-- R1 日常 0.25 h=171.4 -->
+      <rect x="150" y="108.6" width="100" height="171.4" fill="#2d4a3e" opacity="0.4"/>
+      <text class="value" x="200" y="100" text-anchor="middle">25.0%</text>
+      <text class="label" x="200" y="302" text-anchor="middle">R1 日常</text>
+      <!-- R1 春节 0.30 h=205.7 -->
+      <rect x="370" y="74.3" width="100" height="205.7" fill="#2d4a3e" opacity="0.4"/>
+      <text class="value" x="420" y="65" text-anchor="middle">30.0%</text>
+      <text class="label" x="420" y="302" text-anchor="middle">R1 春节</text>
+      <!-- R2 春促 0.30 -->
+      <rect x="590" y="74.3" width="100" height="205.7" fill="#2d4a3e" opacity="0.4"/>
+      <text class="value" x="640" y="65" text-anchor="middle">30.0%</text>
+      <text class="label" x="640" y="302" text-anchor="middle">R2 春促</text>
+      <!-- R2 日常 0.30 -->
+      <rect x="810" y="74.3" width="100" height="205.7" fill="#2d4a3e" opacity="0.4"/>
+      <text class="value" x="860" y="65" text-anchor="middle">30.0%</text>
+      <text class="label" x="860" y="302" text-anchor="middle">R2 日常</text>
+
+      <!-- 退款率折线 16.19 / 13.99 / 10.69 / 13.74 -->
+      <!-- 0.1619 -> y=280-0.1619*685.7=280-111=169 -->
+      <polyline points="200,168.99 420,184.09 640,206.72 860,185.78"
+        fill="none" stroke="#c8472b" stroke-width="3"/>
+      <circle cx="200" cy="168.99" r="6" fill="#c8472b"/>
+      <circle cx="420" cy="184.09" r="6" fill="#c8472b"/>
+      <circle cx="640" cy="206.72" r="6" fill="#c8472b"/>
+      <circle cx="860" cy="185.78" r="6" fill="#c8472b"/>
+      <text class="value" x="200" y="158" text-anchor="middle" fill="#c8472b">16.19%</text>
+      <text class="value" x="420" y="174" text-anchor="middle" fill="#c8472b">13.99%</text>
+      <text class="value" x="640" y="196" text-anchor="middle" fill="#c8472b">10.69%</text>
+      <text class="value" x="860" y="175" text-anchor="middle" fill="#c8472b">13.74%</text>
+
+      <!-- 图例 -->
+      <g transform="translate(70,312)">
+        <rect x="0" y="0" width="14" height="14" fill="#2d4a3e" opacity="0.4"/><text class="legend" x="20" y="11">折扣设置</text>
+        <line x1="120" y1="7" x2="144" y2="7" stroke="#c8472b" stroke-width="3"/>
+        <circle cx="132" cy="7" r="4" fill="#c8472b"/>
+        <text class="legend" x="152" y="11">退款率</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="insight warn">
+    <p><b>第 1 轮日常档退款率 16.19% 是四阶段最高</b>——这个阶段折扣最深（0.25），但退款率反而最高。结合达人数据看，1 月份达人发布以"小粉丝量 + 碎片化"为主（均 2,184 播放），触达的可能是"冲动型而非匹配度高"的用户，退款率偏高符合逻辑。</p>
+  </div>
+</section>
+
+<!-- 第二章 -->
+<section>
+  <h2 class="chapter"><span class="num">02</span>达人发布效果对比</h2>
+  <span class="chapter-rule"></span>
+  <p>第 1 轮是"纯自来水"模式，0 元成本；第 2 轮改为"付费 + 自来水"混合模式，投入约 6,204 USD（约 4.3 万人民币）。结果颇为戏剧性——<b>钱花下去，总播放量反而降了</b>。</p>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div class="label">R1 · 总播放量</div>
+      <div class="val">518,216</div>
+      <div class="delta">37 条 · 12 位达人</div>
+    </div>
+    <div class="kpi">
+      <div class="label">R2 · 总播放量</div>
+      <div class="val">372,377</div>
+      <div class="delta down">▼ 28.1%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">R1 · 总成本</div>
+      <div class="val">¥0</div>
+      <div class="delta up">100% 免费/自来水</div>
+    </div>
+    <div class="kpi featured">
+      <div class="label">R2 · 总成本</div>
+      <div class="val">¥43,428</div>
+      <div class="delta">6,204 USD</div>
+    </div>
+  </div>
+
+  <!-- 图 2.1 月度达人表现 -->
+  <div class="chart-card">
+    <div class="chart-title"><span>图 2.1 ｜ 四个月达人发布表现</span><span class="cap">MONTHLY TIMELINE</span></div>
+    <div class="chart-sub">2 月份是单月播放量峰值（40.6 万），3 月份付费投放开始后播放量 32.7 万，4 月份后继播放量骤降至 4.5 万。</div>
+    <svg class="chart-svg" viewBox="0 0 980 420" xmlns="http://www.w3.org/2000/svg">
+      <line class="grid" x1="70" y1="50" x2="900" y2="50"/>
+      <line class="grid" x1="70" y1="120" x2="900" y2="120"/>
+      <line class="grid" x1="70" y1="190" x2="900" y2="190"/>
+      <line class="grid" x1="70" y1="260" x2="900" y2="260"/>
+      <line class="grid" x1="70" y1="330" x2="900" y2="330"/>
+      <line class="axis" x1="70" y1="330" x2="900" y2="330"/>
+      <!-- 左 Y：播放量 max=500k scale=280/500000 -->
+      <text class="tick" x="62" y="54" text-anchor="end">500k</text>
+      <text class="tick" x="62" y="124" text-anchor="end">375k</text>
+      <text class="tick" x="62" y="194" text-anchor="end">250k</text>
+      <text class="tick" x="62" y="264" text-anchor="end">125k</text>
+      <text class="tick" x="62" y="334" text-anchor="end">0</text>
+      <text class="label" x="40" y="30">播放量</text>
+      <!-- 右 Y：条数/达人数 max=30 scale=280/30 -->
+      <text class="tick" x="910" y="54" text-anchor="start">30</text>
+      <text class="tick" x="910" y="124" text-anchor="start">22.5</text>
+      <text class="tick" x="910" y="194" text-anchor="start">15</text>
+      <text class="tick" x="910" y="264" text-anchor="start">7.5</text>
+      <text class="tick" x="910" y="334" text-anchor="start">0</text>
+      <text class="label" x="910" y="30">条数/达人数</text>
+
+      <!-- 柱：播放量 112198, 406018, 327360, 45017, max=500000, scale=0.00056 -->
+      <!-- h: 62.83, 227.37, 183.32, 25.21 -->
+      <rect x="140" y="267.17" width="100" height="62.83" fill="#0e0e10"/>
+      <text class="value" x="190" y="258" text-anchor="middle">112,198</text>
+      <text class="label" x="190" y="354" text-anchor="middle">1月 (R1)</text>
+
+      <rect x="340" y="102.63" width="100" height="227.37" fill="#0e0e10"/>
+      <text class="value" x="390" y="94" text-anchor="middle">406,018</text>
+      <text class="label" x="390" y="354" text-anchor="middle">2月 (R1)</text>
+
+      <rect x="540" y="146.68" width="100" height="183.32" fill="#0e0e10"/>
+      <text class="value" x="590" y="138" text-anchor="middle">327,360</text>
+      <text class="label" x="590" y="354" text-anchor="middle">3月 (R2)</text>
+
+      <rect x="740" y="304.79" width="100" height="25.21" fill="#0e0e10"/>
+      <text class="value" x="790" y="296" text-anchor="middle">45,017</text>
+      <text class="label" x="790" y="354" text-anchor="middle">4月 (R2)</text>
+
+      <!-- 折线：发布条数 17, 20, 27, 10, max=30, y=330-n*9.33 -->
+      <!-- y: 171.39, 143.4, 77.09, 236.7 -->
+      <polyline points="190,171.39 390,143.4 590,77.09 790,236.7"
+        fill="none" stroke="#c8472b" stroke-width="3"/>
+      <circle cx="190" cy="171.39" r="6" fill="#c8472b"/>
+      <circle cx="390" cy="143.4" r="6" fill="#c8472b"/>
+      <circle cx="590" cy="77.09" r="6" fill="#c8472b"/>
+      <circle cx="790" cy="236.7" r="6" fill="#c8472b"/>
+      <text class="value" x="190" y="163" fill="#c8472b" text-anchor="middle">17</text>
+      <text class="value" x="390" y="135" fill="#c8472b" text-anchor="middle">20</text>
+      <text class="value" x="590" y="69" fill="#c8472b" text-anchor="middle">27</text>
+      <text class="value" x="790" y="228" fill="#c8472b" text-anchor="middle">10</text>
+
+      <!-- 折线：达人数 8, 4, 18, 5 -->
+      <!-- y: 255.36, 292.68, 162.06, 283.35 -->
+      <polyline points="190,255.36 390,292.68 590,162.06 790,283.35"
+        fill="none" stroke="#b8914a" stroke-width="3" stroke-dasharray="5 3"/>
+      <circle cx="190" cy="255.36" r="6" fill="#b8914a"/>
+      <circle cx="390" cy="292.68" r="6" fill="#b8914a"/>
+      <circle cx="590" cy="162.06" r="6" fill="#b8914a"/>
+      <circle cx="790" cy="283.35" r="6" fill="#b8914a"/>
+
+      <!-- 图例 -->
+      <g transform="translate(70,388)">
+        <rect x="0" y="0" width="14" height="14" fill="#0e0e10"/><text class="legend" x="20" y="11">月度播放量</text>
+        <line x1="130" y1="7" x2="154" y2="7" stroke="#c8472b" stroke-width="3"/>
+        <circle cx="142" cy="7" r="4" fill="#c8472b"/>
+        <text class="legend" x="162" y="11">发布条数</text>
+        <line x1="260" y1="7" x2="284" y2="7" stroke="#b8914a" stroke-width="3" stroke-dasharray="4 2"/>
+        <circle cx="272" cy="7" r="4" fill="#b8914a"/>
+        <text class="legend" x="292" y="11">独立达人数</text>
+      </g>
+    </svg>
+  </div>
+
+  <h3 class="sub">付费 vs 免费：钱花得值不值？</h3>
+
+  <div class="vs-box">
+    <div class="left">
+      <h4>付费达人 · 14 条</h4>
+      <div class="big">¥43,428</div>
+      <ul>
+        <li>总播放：<b>288,944</b>（占 R2 总量 77.6%）</li>
+        <li>单条均播放：<b>20,639</b></li>
+        <li>总点赞：8,405 / 总评论：692</li>
+        <li>平均 CPV：<b>0.015 USD / 次</b></li>
+      </ul>
+    </div>
+    <div class="mid">VS</div>
+    <div class="right">
+      <h4>免费达人 · 23 条</h4>
+      <div class="big">¥0</div>
+      <ul>
+        <li>总播放：<b>83,433</b>（占 R2 总量 22.4%）</li>
+        <li>单条均播放：<b>3,628</b></li>
+        <li>总点赞：2,774 / 总评论：196</li>
+        <li>CPV：—</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="insight">
+    <p><b>付费的绝对规模价值是存在的：</b>付费单条均播放是免费的 5.7 倍，且 TOP 1 的 KhrazeGaming（63.7 万粉）单条 21 万播放、CPV 仅 0.0095 USD——这条爆款贡献了第 2 轮 56% 的播放量。问题不是"要不要付费"，而是<b>付费达人的选型是否匹配游戏调性</b>。</p>
+  </div>
+
+  <div class="chart-row">
+    <!-- 图 2.2 CPV 阶梯 -->
+    <div class="chart-card">
+      <div class="chart-title"><span>图 2.2 ｜ 付费达人 CPV 阶梯</span><span class="cap">UNIT: USD/次</span></div>
+      <div class="chart-sub">14 位付费达人 CPV 差距达 194 倍，头部效率极高，尾部严重超预算。</div>
+      <svg class="chart-svg" viewBox="0 0 520 560" xmlns="http://www.w3.org/2000/svg">
+        <!-- 横向条形图，对数坐标 -->
+        <!-- 对数范围 0.008 - 2.0, log10(0.008)≈-2.1, log10(2)≈0.3，跨度 2.4 -->
+        <!-- 轴: x=180 为 log=-2.1 (0.01), x=490 为 log=0.3 (2)  scale=310/2.4=129.17 -->
+        <!-- x = 180 + (log10(cpv)-(-2.1))*129.17 = 180 + (log10(cpv)+2.1)*129.17 -->
+        <!-- 网格线 0.01, 0.1, 1 -->
+        <line class="grid" x1="180" y1="30" x2="180" y2="530"/>
+        <line class="grid" x1="309" y1="30" x2="309" y2="530"/>
+        <line class="grid" x1="438" y1="30" x2="438" y2="530"/>
+        <text class="tick" x="180" y="550" text-anchor="middle">$0.01</text>
+        <text class="tick" x="309" y="550" text-anchor="middle">$0.10</text>
+        <text class="tick" x="438" y="550" text-anchor="middle">$1.00</text>
+
+        <!-- 14 条, 每条高度 30, 起始 y=40 -->
+        <!-- KhrazeGaming 0.0095 -> x=180+(log10(0.0095)+2.1)*129.17=180+(-2.022+2.1)*129.17=180+10.1=190.1 -->
+        <g><rect x="180" y="40" width="10.1" height="24" fill="#2d4a3e"/><text class="tick" x="175" y="56" text-anchor="end">KhrazeGaming (US)</text><text class="value" x="195" y="56" fill="#2d4a3e">$0.0095</text></g>
+        <!-- スチまと 0.0121 -> x=180+(−1.917+2.1)*129.17=180+23.6=203.6 -->
+        <g><rect x="180" y="72" width="23.6" height="24" fill="#2d4a3e"/><text class="tick" x="175" y="88" text-anchor="end">スチまと (JP)</text><text class="value" x="208" y="88" fill="#2d4a3e">$0.0121</text></g>
+        <!-- Game Launch 0.021 -> 180+(−1.678+2.1)*129.17=180+54.5=234.5 -->
+        <g><rect x="180" y="104" width="54.5" height="24" fill="#2d4a3e"/><text class="tick" x="175" y="120" text-anchor="end">Game Launch Central (US)</text><text class="value" x="239" y="120" fill="#2d4a3e">$0.0210</text></g>
+        <!-- モロトフ 0.022 -> 180+(−1.658+2.1)*129.17=180+57.1=237.1 -->
+        <g><rect x="180" y="136" width="57.1" height="24" fill="#2d4a3e"/><text class="tick" x="175" y="152" text-anchor="end">モロトフカクテル (JP)</text><text class="value" x="242" y="152" fill="#2d4a3e">$0.0220</text></g>
+        <!-- BlazeKnight 0.05 -> 180+(−1.301+2.1)*129.17=180+103.2=283.2 -->
+        <g><rect x="180" y="168" width="103.2" height="24" fill="#b8914a"/><text class="tick" x="175" y="184" text-anchor="end">BlazeKnight (IN)</text><text class="value" x="288" y="184" fill="#b8914a">$0.0500</text></g>
+        <!-- Nookrium 0.0626 -> 180+(−1.204+2.1)*129.17=180+115.7=295.7 -->
+        <g><rect x="180" y="200" width="115.7" height="24" fill="#b8914a"/><text class="tick" x="175" y="216" text-anchor="end">Nookrium (US)</text><text class="value" x="300" y="216" fill="#b8914a">$0.0626</text></g>
+        <!-- Ser Medieval 0.0674 -> 180+(−1.171+2.1)*129.17=180+120.0=300.0 -->
+        <g><rect x="180" y="232" width="120" height="24" fill="#b8914a"/><text class="tick" x="175" y="248" text-anchor="end">Ser Medieval (US)</text><text class="value" x="304" y="248" fill="#b8914a">$0.0674</text></g>
+        <!-- Singleplayer Squad 0.0686 -> 180+(−1.163+2.1)*129.17=180+121.0=301 -->
+        <g><rect x="180" y="264" width="121" height="24" fill="#b8914a"/><text class="tick" x="175" y="280" text-anchor="end">Singleplayer Squad (AT)</text><text class="value" x="305" y="280" fill="#b8914a">$0.0686</text></g>
+        <!-- Zade 0.0712 -> 180+(−1.147+2.1)*129.17=180+123.1=303.1 -->
+        <g><rect x="180" y="296" width="123.1" height="24" fill="#b8914a"/><text class="tick" x="175" y="312" text-anchor="end">Zade (FR)</text><text class="value" x="308" y="312" fill="#b8914a">$0.0712</text></g>
+        <!-- Critically Clueless 0.0874 -> 180+(−1.058+2.1)*129.17=180+134.6=314.6 -->
+        <g><rect x="180" y="328" width="134.6" height="24" fill="#b8914a"/><text class="tick" x="175" y="344" text-anchor="end">Critically Clueless (UK)</text><text class="value" x="319" y="344" fill="#b8914a">$0.0874</text></g>
+        <!-- GameTopia 0.0924 -> 180+(−1.034+2.1)*129.17=180+137.7=317.7 -->
+        <g><rect x="180" y="360" width="137.7" height="24" fill="#b8914a"/><text class="tick" x="175" y="376" text-anchor="end">GameTopia</text><text class="value" x="322" y="376" fill="#b8914a">$0.0924</text></g>
+        <!-- Stridah's 0.0981 -> 180+(−1.008+2.1)*129.17=180+141.1=321.1 -->
+        <g><rect x="180" y="392" width="141.1" height="24" fill="#b8914a"/><text class="tick" x="175" y="408" text-anchor="end">Stridah's Angels (US)</text><text class="value" x="326" y="408" fill="#b8914a">$0.0981</text></g>
+        <!-- Wizard Worm 0.5479 -> 180+(−0.2614+2.1)*129.17=180+237.5=417.5 -->
+        <g><rect x="180" y="424" width="237.5" height="24" fill="#c8472b"/><text class="tick" x="175" y="440" text-anchor="end">Wizard Worm (UA)</text><text class="value" x="422" y="440" fill="#c8472b">$0.5479</text></g>
+        <!-- Chato 1.8476 -> 180+(0.2667+2.1)*129.17=180+305.8=485.8 -->
+        <g><rect x="180" y="456" width="305.8" height="24" fill="#c8472b"/><text class="tick" x="175" y="472" text-anchor="end">Chato (US)</text><text class="value" x="490" y="472" fill="#c8472b">$1.8476</text></g>
+
+        <text class="legend" x="180" y="510" font-size="10">■ 极优 (≤$0.05)  ■ 中等 ($0.05-$0.10)  ■ 差 (&gt;$0.10)</text>
+      </svg>
+    </div>
+
+    <!-- 图 2.3 粉丝分级 -->
+    <div class="chart-card">
+      <div class="chart-title"><span>图 2.3 ｜ 粉丝分级播放效率</span><span class="cap">均播放量/条</span></div>
+      <div class="chart-sub">两轮均呈现明显头部效应：粉丝量 10 万+ 达人单条播放是 1 万以下达人的数十倍。</div>
+      <svg class="chart-svg" viewBox="0 0 520 480" xmlns="http://www.w3.org/2000/svg">
+        <!-- 对数 Y 轴 100-200000, log10(100)=2, log10(200000)=5.3, 跨度 3.3 -->
+        <!-- y=400 是 100, y=40 是 200000, scale=360/3.3=109.1 -->
+        <line class="grid" x1="80" y1="40" x2="500" y2="40"/>
+        <line class="grid" x1="80" y1="149.1" x2="500" y2="149.1"/>
+        <line class="grid" x1="80" y1="258.2" x2="500" y2="258.2"/>
+        <line class="grid" x1="80" y1="367.3" x2="500" y2="367.3"/>
+        <line class="axis" x1="80" y1="400" x2="500" y2="400"/>
+        <text class="tick" x="75" y="44" text-anchor="end">100k</text>
+        <text class="tick" x="75" y="153.1" text-anchor="end">10k</text>
+        <text class="tick" x="75" y="262.2" text-anchor="end">1k</text>
+        <text class="tick" x="75" y="371.3" text-anchor="end">100</text>
+
+        <!-- 4 组, 每组 2 柱 -->
+        <!-- R1: 2184, 11028, 38330, 143115 -->
+        <!-- R2: 531, 4783, 7448, 109623 -->
+        <!-- y = 400 - (log10(v)-2)*109.1 -->
+        <!-- R1值: 2184->400-(3.339-2)*109.1=400-146.1=253.9 -->
+        <!-- 11028->400-(4.0425-2)*109.1=400-222.8=177.2 -->
+        <!-- 38330->400-(4.5837-2)*109.1=400-281.9=118.1 -->
+        <!-- 143115->400-(5.1557-2)*109.1=400-344.3=55.7 -->
+        <!-- R2值: 531->400-(2.725-2)*109.1=400-79.1=320.9 -->
+        <!-- 4783->400-(3.680-2)*109.1=400-183.3=216.7 -->
+        <!-- 7448->400-(3.872-2)*109.1=400-204.3=195.7 -->
+        <!-- 109623->400-(5.040-2)*109.1=400-331.6=68.4 -->
+
+        <!-- 组1 小型 -->
+        <rect x="110" y="253.9" width="40" height="146.1" fill="#c8472b" opacity="0.8"/>
+        <rect x="152" y="320.9" width="40" height="79.1" fill="#2d4a3e" opacity="0.8"/>
+        <text class="value" x="130" y="247" text-anchor="middle" font-size="10">2184</text>
+        <text class="value" x="172" y="313" text-anchor="middle" font-size="10">531</text>
+        <text class="label" x="151" y="420" text-anchor="middle" font-size="11">小型</text>
+        <text class="tick" x="151" y="436" text-anchor="middle">&lt;1万粉</text>
+
+        <!-- 组2 中型 -->
+        <rect x="230" y="177.2" width="40" height="222.8" fill="#c8472b" opacity="0.8"/>
+        <rect x="272" y="216.7" width="40" height="183.3" fill="#2d4a3e" opacity="0.8"/>
+        <text class="value" x="250" y="170" text-anchor="middle" font-size="10">11028</text>
+        <text class="value" x="292" y="209" text-anchor="middle" font-size="10">4783</text>
+        <text class="label" x="271" y="420" text-anchor="middle" font-size="11">中型</text>
+        <text class="tick" x="271" y="436" text-anchor="middle">1-5万粉</text>
+
+        <!-- 组3 中大型 -->
+        <rect x="350" y="118.1" width="40" height="281.9" fill="#c8472b" opacity="0.8"/>
+        <rect x="392" y="195.7" width="40" height="204.3" fill="#2d4a3e" opacity="0.8"/>
+        <text class="value" x="370" y="111" text-anchor="middle" font-size="10">38330</text>
+        <text class="value" x="412" y="188" text-anchor="middle" font-size="10">7448</text>
+        <text class="label" x="391" y="420" text-anchor="middle" font-size="11">中大型</text>
+        <text class="tick" x="391" y="436" text-anchor="middle">5-10万粉</text>
+
+        <!-- 组4 大型 -->
+        <rect x="450" y="55.7" width="40" height="344.3" fill="#c8472b" opacity="0.8"/>
+        <rect x="492" y="68.4" width="8" height="331.6" fill="#2d4a3e" opacity="0.8"/>
+        <text class="value" x="470" y="48" text-anchor="middle" font-size="10">143k</text>
+        <text class="value" x="496" y="61" text-anchor="middle" font-size="9">110k</text>
+        <text class="label" x="475" y="420" text-anchor="middle" font-size="11">大型</text>
+        <text class="tick" x="475" y="436" text-anchor="middle">&gt;10万粉</text>
+
+        <!-- 图例 -->
+        <g transform="translate(80,458)">
+          <rect x="0" y="0" width="14" height="14" fill="#c8472b" opacity="0.8"/><text class="legend" x="20" y="11">R1 均播放</text>
+          <rect x="120" y="0" width="14" height="14" fill="#2d4a3e" opacity="0.8"/><text class="legend" x="140" y="11">R2 均播放</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <h3 class="sub">CPV 极端案例：付费花在哪里了？</h3>
+  <table class="data">
+    <thead>
+      <tr><th>达人</th><th>区域</th><th>粉丝量</th><th class="num">费用(USD)</th><th class="num">播放量</th><th class="num">CPV(USD)</th><th>评级</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>KhrazeGaming</td><td>美国</td><td>63.7万</td><td class="num">2,000</td><td class="num">210,000</td><td class="num">0.0095</td><td style="color:var(--accent-2)">★★★★★ 极优</td></tr>
+      <tr><td>スチまと / STEAM紹介</td><td>日本</td><td>3.76万</td><td class="num">350</td><td class="num">29,000</td><td class="num">0.0121</td><td style="color:var(--accent-2)">★★★★★ 极优</td></tr>
+      <tr><td>Game Launch Central</td><td>美国</td><td>1.33万</td><td class="num">50</td><td class="num">2,386</td><td class="num">0.0210</td><td style="color:var(--accent-2)">★★★★ 良</td></tr>
+      <tr><td>モロトフカクテル</td><td>日本</td><td>2.49万</td><td class="num">155</td><td class="num">7,041</td><td class="num">0.0220</td><td style="color:var(--accent-2)">★★★★ 良</td></tr>
+      <tr><td>BlazeKnight</td><td>印度</td><td>9万</td><td class="num">500</td><td class="num">10,000</td><td class="num">0.0500</td><td>★★★ 中</td></tr>
+      <tr><td>Nookrium</td><td>美国</td><td>18.4万</td><td class="num">579</td><td class="num">9,246</td><td class="num">0.0626</td><td>★★★ 中</td></tr>
+      <tr><td>Zade</td><td>法国</td><td>5.82万</td><td class="num">700</td><td class="num">9,833</td><td class="num">0.0712</td><td>★★★ 中</td></tr>
+      <tr class="highlight"><td>Wizard Worm</td><td>乌克兰</td><td>1.02万</td><td class="num">200</td><td class="num">365</td><td class="num">0.5479</td><td style="color:var(--accent)">★ 差</td></tr>
+      <tr class="highlight"><td><b>Chato</b></td><td>美国</td><td>7.64万</td><td class="num"><b>800</b></td><td class="num"><b>433</b></td><td class="num"><b>1.8476</b></td><td style="color:var(--accent)"><b>★ 极差</b></td></tr>
+    </tbody>
+  </table>
+
+  <div class="insight warn">
+    <p><b>Chato 一条视频拉高整体 CPV 均值。</b> 800 USD 预算 ≈ 撬动 Ser Medieval、モロトフカクテル、Game Launch Central 三位达人合计；实际换回 433 播放量，CPV 1.85 USD 是头部达人的 194 倍。第 2 轮付费预算的 12.9% 投给了 Chato，这是这一轮预算使用效率最大的单点漏洞。</p>
+  </div>
+</section>
+
+<!-- 第三章 关联分析 -->
+<section>
+  <h2 class="chapter"><span class="num">03</span>销量 × 达人 关联分析</h2>
+  <span class="chapter-rule"></span>
+  <p>这是本报告的核心——<b>达人发布投入 / 播放量 / 愿望单 / 销量</b> 四者之间的关联关系。</p>
+
+  <!-- 图 3.1 关联时序 -->
+  <div class="chart-card">
+    <div class="chart-title"><span>图 3.1 ｜ 达人播放量 vs 销售转化 联动时序</span><span class="cap">CORRELATION OVERLAY</span></div>
+    <div class="chart-sub">左轴：达人月度播放量（柱）／ 右轴：同期愿望单新增与净流水（线）。</div>
+    <svg class="chart-svg" viewBox="0 0 980 420" xmlns="http://www.w3.org/2000/svg">
+      <line class="grid" x1="80" y1="50" x2="900" y2="50"/>
+      <line class="grid" x1="80" y1="120" x2="900" y2="120"/>
+      <line class="grid" x1="80" y1="190" x2="900" y2="190"/>
+      <line class="grid" x1="80" y1="260" x2="900" y2="260"/>
+      <line class="grid" x1="80" y1="330" x2="900" y2="330"/>
+      <line class="axis" x1="80" y1="330" x2="900" y2="330"/>
+
+      <!-- 左 Y 播放量 max=500k -->
+      <text class="tick" x="72" y="54" text-anchor="end">500k</text>
+      <text class="tick" x="72" y="124" text-anchor="end">375k</text>
+      <text class="tick" x="72" y="194" text-anchor="end">250k</text>
+      <text class="tick" x="72" y="264" text-anchor="end">125k</text>
+      <text class="tick" x="72" y="334" text-anchor="end">0</text>
+      <text class="label" x="40" y="30">播放量</text>
+
+      <!-- 右 Y 愿望单/流水 max=40000 scale=280/40000 -->
+      <text class="tick" x="910" y="54" text-anchor="start">40k</text>
+      <text class="tick" x="910" y="124" text-anchor="start">30k</text>
+      <text class="tick" x="910" y="194" text-anchor="start">20k</text>
+      <text class="tick" x="910" y="264" text-anchor="start">10k</text>
+      <text class="tick" x="910" y="334" text-anchor="start">0</text>
+      <text class="label" x="910" y="30">愿望单/流水</text>
+
+      <!-- 柱: 播放量 112198, 406018, 327360, 45017 scale=280/500000=0.00056 -->
+      <!-- h=62.83, 227.37, 183.32, 25.21 -->
+      <rect x="140" y="267.17" width="100" height="62.83" fill="#0e0e10" opacity="0.85"/>
+      <text class="value" x="190" y="258" text-anchor="middle">112,198</text>
+      <text class="label" x="190" y="354" text-anchor="middle">1月</text>
+
+      <rect x="340" y="102.63" width="100" height="227.37" fill="#0e0e10" opacity="0.85"/>
+      <text class="value" x="390" y="94" text-anchor="middle">406,018</text>
+      <text class="label" x="390" y="354" text-anchor="middle">2月</text>
+
+      <rect x="540" y="146.68" width="100" height="183.32" fill="#0e0e10" opacity="0.85"/>
+      <text class="value" x="590" y="138" text-anchor="middle">327,360</text>
+      <text class="label" x="590" y="354" text-anchor="middle">3月</text>
+
+      <rect x="740" y="304.79" width="100" height="25.21" fill="#0e0e10" opacity="0.85"/>
+      <text class="value" x="790" y="296" text-anchor="middle">45,017</text>
+      <text class="label" x="790" y="354" text-anchor="middle">4月</text>
+
+      <!-- 愿望单 2319, 4382, 2185, 2231 scale=280/40000=0.007 -->
+      <!-- y=330-v*0.007 -->
+      <!-- y: 313.77, 299.33, 314.71, 314.38 -->
+      <polyline points="190,313.77 390,299.33 590,314.71 790,314.38"
+        fill="none" stroke="#c8472b" stroke-width="3"/>
+      <circle cx="190" cy="313.77" r="7" fill="#c8472b"/>
+      <circle cx="390" cy="299.33" r="7" fill="#c8472b"/>
+      <circle cx="590" cy="314.71" r="7" fill="#c8472b"/>
+      <circle cx="790" cy="314.38" r="7" fill="#c8472b"/>
+
+      <!-- 净流水 11892, 34736, 11193, 12757 -->
+      <!-- y: 246.76, 86.85, 251.65, 240.70 -->
+      <polyline points="190,246.76 390,86.85 590,251.65 790,240.70"
+        fill="none" stroke="#b8914a" stroke-width="3" stroke-dasharray="5 3"/>
+      <circle cx="190" cy="246.76" r="7" fill="#b8914a"/>
+      <circle cx="390" cy="86.85" r="7" fill="#b8914a"/>
+      <circle cx="590" cy="251.65" r="7" fill="#b8914a"/>
+      <circle cx="790" cy="240.70" r="7" fill="#b8914a"/>
+      <text class="value" x="390" y="78" fill="#b8914a" text-anchor="middle">¥34,736</text>
+
+      <!-- 图例 -->
+      <g transform="translate(80,388)">
+        <rect x="0" y="0" width="14" height="14" fill="#0e0e10"/><text class="legend" x="20" y="11">达人播放量</text>
+        <line x1="130" y1="7" x2="154" y2="7" stroke="#c8472b" stroke-width="3"/>
+        <circle cx="142" cy="7" r="4" fill="#c8472b"/>
+        <text class="legend" x="162" y="11">愿望单新增</text>
+        <line x1="270" y1="7" x2="294" y2="7" stroke="#b8914a" stroke-width="3" stroke-dasharray="4 2"/>
+        <circle cx="282" cy="7" r="4" fill="#b8914a"/>
+        <text class="legend" x="302" y="11">净流水 (RMB)</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="insight">
+    <p><b>播放量和销售表现高度同步：</b>2 月份达人播放量冲到 40.6 万（峰值），对应春节档净流水 3.47 万（峰值）；4 月份播放量跌到 4.5 万（谷值），对应 4 月日常档净流水 1.28 万。可以说，<b>达人播放量是愿望单新增的强前导指标，而愿望单新增又是销量的前导指标</b>。</p>
+  </div>
+
+  <h3 class="sub">单位曝光的销售转化效率</h3>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>阶段</th>
+        <th class="num">对应月份达人播放量</th>
+        <th class="num">愿望单新增</th>
+        <th class="num">净销量</th>
+        <th class="num">净流水 (RMB)</th>
+        <th class="num">播放→愿望单</th>
+        <th class="num">播放→销量</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>R1 日常打折</td><td class="num">112,198 (1月)</td><td class="num">2,319</td><td class="num">766</td><td class="num">11,892</td><td class="num">2.07%</td><td class="num">0.68%</td></tr>
+      <tr class="highlight"><td><b>R1 农历新年</b></td><td class="num"><b>406,018 (2月)</b></td><td class="num"><b>4,382</b></td><td class="num"><b>2,489</b></td><td class="num"><b>34,736</b></td><td class="num"><b>1.08%</b></td><td class="num"><b>0.61%</b></td></tr>
+      <tr><td>R2 春促+大版本</td><td class="num">327,360 (3月)</td><td class="num">2,185</td><td class="num">769</td><td class="num">11,193</td><td class="num">0.67%</td><td class="num">0.23%</td></tr>
+      <tr><td>R2 日常折扣</td><td class="num">45,017 (4月)</td><td class="num">2,231</td><td class="num">860</td><td class="num">12,757</td><td class="num">4.96%</td><td class="num">1.91%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="insight warn">
+    <p><b>三条异常值得注意：</b></p>
+    <p>① R1 日常档"播放→愿望单 2.07%"远高于 R2 春促"0.67%"——同样是新版本前后的日常时段，R1 的触达质量明显优于 R2，侧面反映 R2 付费达人带来的播放量"水分较大"（部分是合集视频一闪而过的曝光，而非深度内容）。</p>
+    <p>② <b>R2 日常档转化率突然飙到 4.96%——不是 4 月份销售爆发，是 4 月份播放分母（4.5 万）太小导致的比例异常</b>。真实情况是 4 月份销售主要靠 3 月积累的愿望单用户延后下单。</p>
+    <p>③ 农历新年档虽然转化率不是最高，但以 4,382 愿望单新增和 2,489 净销量成为单阶段王者——<b>大曝光 × 大节日 × 适度折扣</b> 的乘法效应最值得复制。</p>
+  </div>
+
+  <h3 class="sub">R1 vs R2 投产比终极对照</h3>
+
+  <!-- 图 3.2 ROI 对比 - 对数坐标水平条形图 -->
+  <div class="chart-card inv">
+    <div class="chart-title" style="color:var(--paper)"><span>图 3.2 ｜ 两轮 ROI 终局对比</span><span class="cap" style="color:var(--gold)">RESOURCE EFFICIENCY</span></div>
+    <div class="chart-sub" style="color:#b8b1a3">左栏为投入，右栏为产出。R1 是 "0 成本/高产出" 的低概率事件，R2 是 "高投入/中产出" 的常态事件——本质不可类比。</div>
+    <svg class="chart-svg inv-bg" viewBox="0 0 980 400" xmlns="http://www.w3.org/2000/svg">
+      <!-- 对数坐标 1 - 1,000,000 跨度 6 -->
+      <!-- x=200 (log=0) 到 x=920 (log=6), scale=720/6=120 -->
+      <line class="grid" x1="200" y1="30" x2="200" y2="370"/>
+      <line class="grid" x1="320" y1="30" x2="320" y2="370"/>
+      <line class="grid" x1="440" y1="30" x2="440" y2="370"/>
+      <line class="grid" x1="560" y1="30" x2="560" y2="370"/>
+      <line class="grid" x1="680" y1="30" x2="680" y2="370"/>
+      <line class="grid" x1="800" y1="30" x2="800" y2="370"/>
+      <line class="grid" x1="920" y1="30" x2="920" y2="370"/>
+      <text class="tick" x="200" y="388" text-anchor="middle">1</text>
+      <text class="tick" x="320" y="388" text-anchor="middle">10</text>
+      <text class="tick" x="440" y="388" text-anchor="middle">100</text>
+      <text class="tick" x="560" y="388" text-anchor="middle">1k</text>
+      <text class="tick" x="680" y="388" text-anchor="middle">10k</text>
+      <text class="tick" x="800" y="388" text-anchor="middle">100k</text>
+      <text class="tick" x="920" y="388" text-anchor="middle">1M</text>
+
+      <!-- 4 个指标 × 2 轮 = 8 条, 每组间距 85 -->
+      <!-- 投入 R1=1(设为1以对数显示), R2=43428 -->
+      <!-- 播放量 R1=518216, R2=372377 -->
+      <!-- 净销量 R1=3255, R2=1629 -->
+      <!-- 净流水 R1=46629, R2=23950 -->
+
+      <!-- 组1 投入 y=50 -->
+      <text class="label" x="190" y="80" text-anchor="end" fill="#d4cdbf">达人投入 (¥)</text>
+      <rect x="200" y="55" width="0.1" height="24" fill="#c8472b"/>
+      <text class="value" x="210" y="71" fill="#f4efe6">¥0</text>
+      <!-- R2 43428 -> log=4.6378, x=200+4.6378*120=756.5, w=556.5 -->
+      <rect x="200" y="85" width="556.5" height="24" fill="#b8914a"/>
+      <text class="value" x="761" y="101" fill="#f4efe6">¥43,428</text>
+
+      <!-- 组2 播放量 y=135 -->
+      <text class="label" x="190" y="160" text-anchor="end" fill="#d4cdbf">播放量</text>
+      <!-- 518216 log=5.7145, x=200+5.7145*120=885.7, w=685.7 -->
+      <rect x="200" y="135" width="685.7" height="24" fill="#c8472b"/>
+      <text class="value" x="890" y="151" fill="#f4efe6">518,216</text>
+      <!-- 372377 log=5.5711, x=200+5.5711*120=868.5, w=668.5 -->
+      <rect x="200" y="165" width="668.5" height="24" fill="#b8914a"/>
+      <text class="value" x="873" y="181" fill="#f4efe6">372,377</text>
+
+      <!-- 组3 净销量 y=215 -->
+      <text class="label" x="190" y="240" text-anchor="end" fill="#d4cdbf">净销量 (份)</text>
+      <!-- 3255 log=3.5125, x=200+3.5125*120=621.5, w=421.5 -->
+      <rect x="200" y="215" width="421.5" height="24" fill="#c8472b"/>
+      <text class="value" x="626" y="231" fill="#f4efe6">3,255</text>
+      <!-- 1629 log=3.2119, x=200+3.2119*120=585.4, w=385.4 -->
+      <rect x="200" y="245" width="385.4" height="24" fill="#b8914a"/>
+      <text class="value" x="590" y="261" fill="#f4efe6">1,629</text>
+
+      <!-- 组4 净流水 y=295 -->
+      <text class="label" x="190" y="320" text-anchor="end" fill="#d4cdbf">净流水 (¥)</text>
+      <!-- 46629 log=4.6687, x=200+4.6687*120=760.2, w=560.2 -->
+      <rect x="200" y="295" width="560.2" height="24" fill="#c8472b"/>
+      <text class="value" x="765" y="311" fill="#f4efe6">¥46,629</text>
+      <!-- 23950 log=4.3793, x=200+4.3793*120=725.5, w=525.5 -->
+      <rect x="200" y="325" width="525.5" height="24" fill="#b8914a"/>
+      <text class="value" x="730" y="341" fill="#f4efe6">¥23,950</text>
+    </svg>
+  </div>
+
+  <div class="insight action">
+    <p><b>R1 不是基线，是天花板。</b> R1 吃到的是日本小众播主自发连载（ぽんぽんの動画箱 #1-5 单条均破 2 万）+ 头部 Vtuber さくよう 单条 14.3 万的"免费红利"，这种红利在新游发布热度窗口才会出现，是不可复制的运营高点。把 R1 作为"免费版基线"去要求 R2 是不公平的。<b>R2 真正该对标的是 "没有付费投放时，这款游戏在 3-4 月份会拿到多少播放量"</b>——而这个数字可能远低于 R2 实际的 37 万。</p>
+  </div>
+</section>
+
+<!-- 第四章 区域 -->
+<section>
+  <h2 class="chapter"><span class="num">04</span>区域布局与爆款特征</h2>
+  <span class="chapter-rule"></span>
+
+  <div class="chart-row">
+    <!-- 图 4.1 R1 区域饼图 -->
+    <div class="chart-card">
+      <div class="chart-title"><span>图 4.1 ｜ R1 播放量区域分布</span><span class="cap">ROUND 1</span></div>
+      <div class="chart-sub">日本市场贡献 93.7% 的播放量，是第 1 轮的绝对核心阵地。</div>
+      <svg class="chart-svg" viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg">
+        <!-- 饼图中心 (180,170), 半径 130 -->
+        <!-- 日本 93.7% 韩国 3.9% 美国 1.6% 澳 0.8% 哈 0.1% -->
+        <!-- 开始角度 -90 (顶部)，顺时针 -->
+        <!-- 日本: 0 - 337.32°  -->
+        <!-- 由于 >180°, 需要 large-arc-flag=1 -->
+        <!-- 起点 (180, 40), 终点用 cos/sin 计算: 角度=-90+337.32=247.32° -->
+        <!-- x=180+130*cos(247.32*pi/180), y=170+130*sin(247.32*pi/180) -->
+        <!-- cos(247.32)=-0.3858, sin(247.32)=-0.9226 -->
+        <!-- x=180+130*(-0.3858)=180-50.15=129.85 -->
+        <!-- y=170+130*(-0.9226)=170-119.94=50.06 -->
+        <path d="M 180 170 L 180 40 A 130 130 0 1 1 129.85 50.06 Z" fill="#c8472b"/>
+        <!-- 韩国 3.9%: 从 247.32 到 261.36 -->
+        <!-- 起点 (129.85, 50.06), 终点: 261.36° cos=-0.1513, sin=-0.9885, x=180+130*-0.1513=160.33, y=170+130*-0.9885=41.49 -->
+        <path d="M 180 170 L 129.85 50.06 A 130 130 0 0 1 160.33 41.49 Z" fill="#2d4a3e"/>
+        <!-- 美国 1.6%: 从 261.36 到 267.12 -->
+        <!-- 起点 (160.33, 41.49), 终点: 267.12° cos=-0.0502, sin=-0.9987, x=180+130*-0.0502=173.47, y=170+130*-0.9987=40.17 -->
+        <path d="M 180 170 L 160.33 41.49 A 130 130 0 0 1 173.47 40.17 Z" fill="#b8914a"/>
+        <!-- 澳大利亚 0.8% 从 267.12 到 270.0 -->
+        <!-- 起点 (173.47, 40.17), 终点: 270° cos=0, sin=-1, x=180, y=40 -->
+        <path d="M 180 170 L 173.47 40.17 A 130 130 0 0 1 180 40 Z" fill="#6a655d"/>
+        <!-- 哈 0.1% 太小，几乎不可见 -->
+
+        <!-- 内圈制造 donut -->
+        <circle cx="180" cy="170" r="65" fill="#fff"/>
+        <text x="180" y="168" text-anchor="middle" font-size="22" font-weight="900">518k</text>
+        <text class="tick" x="180" y="188" text-anchor="middle">总播放量</text>
+
+        <!-- 图例 -->
+        <g transform="translate(340,60)">
+          <rect x="0" y="0" width="14" height="14" fill="#c8472b"/><text class="legend" x="22" y="11">日本  485,691  (93.7%)</text>
+          <rect x="0" y="28" width="14" height="14" fill="#2d4a3e"/><text class="legend" x="22" y="39">韩国  20,162   (3.9%)</text>
+          <rect x="0" y="56" width="14" height="14" fill="#b8914a"/><text class="legend" x="22" y="67">美国  8,059    (1.6%)</text>
+          <rect x="0" y="84" width="14" height="14" fill="#6a655d"/><text class="legend" x="22" y="95">澳大利亚 3,975 (0.8%)</text>
+          <rect x="0" y="112" width="14" height="14" fill="#8b5a3c"/><text class="legend" x="22" y="123">哈萨克斯坦 329 (0.1%)</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- 图 4.2 R2 区域饼图 -->
+    <div class="chart-card">
+      <div class="chart-title"><span>图 4.2 ｜ R2 播放量区域分布</span><span class="cap">ROUND 2</span></div>
+      <div class="chart-sub">美国市场反超至 60.9%，日本降至 25.9%；覆盖区域从 5 个扩至 9 个。</div>
+      <svg class="chart-svg" viewBox="0 0 520 340" xmlns="http://www.w3.org/2000/svg">
+        <!-- 美国 60.9%, 日本 25.9%, 韩国 5.1%, 印度 2.7%, 法国 2.6%, 奥 1.0%, 巴 0.7%, 乌 0.5%, 英 0.5% -->
+        <!-- 美国 219.24° 从 -90 到 129.24° -->
+        <!-- 终点 cos(129.24)=-0.6320 sin(129.24)=0.7750, x=180-82.16=97.84, y=170+100.75=270.75 -->
+        <path d="M 180 170 L 180 40 A 130 130 0 1 1 97.84 270.75 Z" fill="#c8472b"/>
+        <!-- 日本 25.9% 93.24° 从 129.24 到 222.48 -->
+        <!-- 终点 cos(222.48)=-0.7374 sin(222.48)=-0.6754, x=180-95.86=84.14, y=170-87.80=82.20 -->
+        <path d="M 180 170 L 97.84 270.75 A 130 130 0 0 1 84.14 82.20 Z" fill="#2d4a3e"/>
+        <!-- 韩国 5.1% 18.36° 从 222.48 到 240.84 -->
+        <!-- 终点 cos(240.84)=-0.4873 sin(240.84)=-0.8732, x=180-63.35=116.65, y=170-113.52=56.48 -->
+        <path d="M 180 170 L 84.14 82.20 A 130 130 0 0 1 116.65 56.48 Z" fill="#b8914a"/>
+        <!-- 印度 2.7% 9.72° 从 240.84 到 250.56 -->
+        <!-- 终点 cos(250.56)=-0.3311 sin(250.56)=-0.9436, x=180-43.04=136.96, y=170-122.67=47.33 -->
+        <path d="M 180 170 L 116.65 56.48 A 130 130 0 0 1 136.96 47.33 Z" fill="#6a655d"/>
+        <!-- 法国 2.6% 9.36° 从 250.56 到 259.92 -->
+        <!-- 终点 cos(259.92)=-0.1753 sin(259.92)=-0.9845, x=180-22.79=157.21, y=170-127.99=42.01 -->
+        <path d="M 180 170 L 136.96 47.33 A 130 130 0 0 1 157.21 42.01 Z" fill="#8b5a3c"/>
+        <!-- 奥地利 1% 3.6° 从 259.92 到 263.52 -->
+        <!-- cos(263.52)=-0.1133 sin(263.52)=-0.9936, x=180-14.73=165.27, y=170-129.17=40.83 -->
+        <path d="M 180 170 L 157.21 42.01 A 130 130 0 0 1 165.27 40.83 Z" fill="#4a6b4a"/>
+        <!-- 巴西 0.7% 2.52° 从 263.52 到 266.04 -->
+        <!-- cos(266.04)=-0.0691 sin(266.04)=-0.9976, x=180-8.98=171.02, y=170-129.69=40.31 -->
+        <path d="M 180 170 L 165.27 40.83 A 130 130 0 0 1 171.02 40.31 Z" fill="#a0553a"/>
+        <!-- 乌克兰 0.5% 1.8° 从 266.04 到 267.84 -->
+        <!-- cos(267.84)=-0.0377 sin(267.84)=-0.9993, x=180-4.90=175.10, y=170-129.91=40.09 -->
+        <path d="M 180 170 L 171.02 40.31 A 130 130 0 0 1 175.10 40.09 Z" fill="#3d5a6b"/>
+        <!-- 英国 0.5% 1.8° 从 267.84 到 269.64 -->
+        <!-- cos(269.64)=-0.0063 sin(269.64)=-1.0000, x=180-0.82=179.18, y=170-130=40 -->
+        <path d="M 180 170 L 175.10 40.09 A 130 130 0 0 1 179.18 40.00 Z" fill="#7a6a4a"/>
+
+        <circle cx="180" cy="170" r="65" fill="#fff"/>
+        <text x="180" y="168" text-anchor="middle" font-size="22" font-weight="900">372k</text>
+        <text class="tick" x="180" y="188" text-anchor="middle">总播放量</text>
+
+        <g transform="translate(340,35)">
+          <rect x="0" y="0" width="10" height="10" fill="#c8472b"/><text class="legend" x="18" y="9" font-size="10">美国 226,607 (60.9%)</text>
+          <rect x="0" y="20" width="10" height="10" fill="#2d4a3e"/><text class="legend" x="18" y="29" font-size="10">日本 96,553 (25.9%)</text>
+          <rect x="0" y="40" width="10" height="10" fill="#b8914a"/><text class="legend" x="18" y="49" font-size="10">韩国 18,967 (5.1%)</text>
+          <rect x="0" y="60" width="10" height="10" fill="#6a655d"/><text class="legend" x="18" y="69" font-size="10">印度 10,000 (2.7%)</text>
+          <rect x="0" y="80" width="10" height="10" fill="#8b5a3c"/><text class="legend" x="18" y="89" font-size="10">法国 9,833 (2.6%)</text>
+          <rect x="0" y="100" width="10" height="10" fill="#4a6b4a"/><text class="legend" x="18" y="109" font-size="10">奥地利 3,569 (1.0%)</text>
+          <rect x="0" y="120" width="10" height="10" fill="#a0553a"/><text class="legend" x="18" y="129" font-size="10">巴西 2,580 (0.7%)</text>
+          <rect x="0" y="140" width="10" height="10" fill="#3d5a6b"/><text class="legend" x="18" y="149" font-size="10">乌克兰 1,739 (0.5%)</text>
+          <rect x="0" y="160" width="10" height="10" fill="#7a6a4a"/><text class="legend" x="18" y="169" font-size="10">英国 1,717 (0.5%)</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+
+  <div class="insight">
+    <p><b>区域战略明显切换：</b>R1 以日本为唯一重心（28/37 条），靠日本中型播主的自发传播拿到规模；R2 重心转向欧美（付费达人集中在美、英、法、奥地利等），但欧美付费达人的转化表现两极分化——KhrazeGaming、Nookrium 类头部达人效率高，而 Chato、Wizard Worm 类中小达人投入产出严重失衡。</p>
+  </div>
+
+  <h3 class="sub">爆款内容特征</h3>
+  <table class="data">
+    <thead>
+      <tr><th>排名</th><th>达人</th><th>轮次</th><th>区域</th><th class="num">粉丝量</th><th class="num">播放量</th><th>内容形式</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>KhrazeGaming</td><td>R2-付费</td><td>美国</td><td class="num">63.7万</td><td class="num">210,000</td><td>大型合集植入（0:20）</td></tr>
+      <tr><td>2</td><td>ぽんぽんの動画箱 #1</td><td>R1-免费</td><td>日本</td><td class="num">5.26万</td><td class="num">143,138</td><td>独立连载评论</td></tr>
+      <tr><td>3</td><td>さくよう</td><td>R1-免费</td><td>日本</td><td class="num">16.16万</td><td class="num">143,115</td><td>独立合集视频</td></tr>
+      <tr><td>4</td><td>ぽんぽんの動画箱 #3</td><td>R1-免费</td><td>日本</td><td class="num">5.28万</td><td class="num">39,731</td><td>独立连载评论</td></tr>
+      <tr><td>5</td><td>28-結月ゆかり派-</td><td>R1-免费</td><td>日本</td><td class="num">3.46万</td><td class="num">36,402</td><td>独立剧情视频</td></tr>
+    </tbody>
+  </table>
+
+  <div class="insight">
+    <p><b>爆款有两条截然不同的路径：</b> ① <b>头部合集植入</b>（KhrazeGaming 式）——高粉丝基础 + 品类推荐合集，靠流量池碾压；② <b>中型独立深度内容</b>（ぽんぽんの動画箱 / さくよう 式）——5 万左右粉丝的日本播主，做独立连载或完整评测，靠内容质量出圈。这两条路径都值得固化为可复制策略，而"小粉丝量 + 碎片化发布"（如 R1 中日本大量 2-3 千粉的播主）虽然数量多但规模效应弱，性价比一般。</p>
+  </div>
+</section>
+
+<!-- 最终结论 -->
+<div class="verdict">
+  <h2>FINAL TAKEAWAYS · 七条可落地建议</h2>
+  <ol>
+    <li><b>不要把 R1 当基线做 R2 的考核。</b> R1 是"新游热度 × 免费红利 × 日本市场发酵"三重加成的历史高点，强行要求 R2 复刻是无效目标。R2 的真实参照是"纯付费条件下，这款游戏在无自然热度期能达到的基准播放量"。</li>
+    <li><b>达人选型的"双守门"机制</b>——单条达人预算不超过该达人过往同类视频均播放 × 目标 CPV × 1.3；同时过往视频播放量分位数 &gt;P30。这条规则能拦住 Chato 这种 800 USD / 433 播放的极端案例。</li>
+    <li><b>复制"中型深度内容"模板</b>。R1 的 ぽんぽんの動画箱（5 万粉连载）、さくよう（16 万粉 Vtuber）是明确的爆款模板：粉丝量 3-20 万、独立长视频 / 连载、日本市场。R3 应主动签约 2-3 位符合这个画像的日本中型播主。</li>
+    <li><b>押节点不押时长</b>。农历新年档日均销量 177.8，是第 2 轮日常档（61.4）的 2.9 倍。下一轮打折应优先选择大节日（夏促、黑五、圣诞）+ 版本更新叠加，而非"补齐 14 天折扣时长"。</li>
+    <li><b>美国市场需要"头部 + 免费长尾"两翼齐飞</b>。KhrazeGaming 证明美国头部可行，但单条 2,000 USD 的投入需要至少 2 条以上免费长尾（类似日本模式）来分摊风险。目前 R2 美国付费占比过高、免费占比过低。</li>
+    <li><b>愿望单新增应成为达人投放的核心 KPI，而非播放量</b>。播放量可以靠大合集刷数据，但愿望单新增高度依赖"内容是否让观众真的想买"。R2 春促 0.67% 的播放→愿望单转化率偏低，应在下一轮特别监控此指标。</li>
+    <li><b>退款率 16.19% 需要单独归因</b>。R1 日常打折折扣最深、退款率最高，这条异常值得深入排查：是折扣打得过深 / 触达人群错位 / 还是游戏某个具体痛点劝退？建议做退款用户抽样访谈，避免 R3 复现。</li>
+  </ol>
+</div>
+
+<div class="ornament">✦ ✦ ✦</div>
+
+<footer>
+  <span>SYWDN · 重铸纪元 · 数据复盘 Vol.001</span>
+  <span>GENERATED 2026.04.17</span>
+  <span>END OF REPORT</span>
+</footer>
+
+</div>
+</body>
+</html>
